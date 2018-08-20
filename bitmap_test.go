@@ -43,7 +43,7 @@ func TestBitmapGet(t *testing.T) {
 	one := int64(5*64 + (63 - 5))
 	for i := int64(5 * 64); i < 6*64; i++ {
 		if i == one {
-			require.True(b.Get(i), "%i -> %s", i, strconv.FormatUint(b.w[1], 2))
+			require.True(b.Get(i), "%d -> %s", i, strconv.FormatUint(b.w[1], 2))
 		} else {
 			require.False(b.Get(i), "%d", i-5*64)
 		}
@@ -217,6 +217,26 @@ func BenchmarkBitmapGet(b *testing.B) {
 	}
 }
 
+func BenchmarkBitmapGetSequential(b *testing.B) {
+	bitmap, err := newBigBitmap()
+	require.NoError(b, err)
+	for i := 0; i < b.N; i++ {
+		for i := int64(0); i < bitmap.n; i++ {
+			_ = bitmap.Get(i)
+		}
+	}
+}
+
+func BenchmarkBitmapGetNotSequential(b *testing.B) {
+	bitmap, err := newBigBitmap()
+	require.NoError(b, err)
+	for i := 0; i < b.N; i++ {
+		for i := bitmap.n; i >= 0; i-- {
+			_ = bitmap.Get(i)
+		}
+	}
+}
+
 func BenchmarkBitmapWrite(b *testing.B) {
 	bitmap := newBitmap()
 	buf := bytes.NewBuffer(nil)
@@ -260,4 +280,18 @@ func newBitmap() *Bitmap {
 	b.n = 10 * 64
 	b.lastrlw = 5
 	return b
+}
+
+func newBigBitmap() (*Bitmap, error) {
+	b := New()
+
+	for i := int64(0); i < 100000; i++ {
+		if i%2 == 0 {
+			if err := b.Set(i); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return b, nil
 }

@@ -19,6 +19,11 @@ type Bitmap struct {
 
 	// stuff for writing efficiently
 	lastrlw int
+
+	// stuff for reading efficiently
+	cursor  int
+	lastpos int64
+	acc     int64
 }
 
 // New creates a new empty bitmap.
@@ -219,11 +224,20 @@ func (b *Bitmap) Get(pos int64) bool {
 		return false
 	}
 
-	var acc int64
-	for i := 0; i < len(b.w); i++ {
-		word := rlw(b.w[i])
+	if b.lastpos > pos {
+		b.lastpos = -1
+		b.cursor = 0
+		b.acc = 0
+	} else if b.cursor >= len(b.w) {
+		b.cursor = b.lastrlw
+	}
+
+	for ; b.cursor < len(b.w); b.cursor++ {
+		acc := b.acc
+		word := rlw(b.w[b.cursor])
 		kb := int64(word.k()) * 64
-		if pos < acc+kb {
+		if pos < b.acc+kb {
+			b.lastpos = pos
 			return word.b()
 		}
 
@@ -233,7 +247,7 @@ func (b *Bitmap) Get(pos int64) bool {
 		if l > 0 && pos < acc+l*64 {
 			for j := 1; j <= int(word.l()); j++ {
 				if pos < acc+64 {
-					w := b.w[i+j]
+					w := b.w[b.cursor+j]
 					mask := uint64(1) << (63 - uint64(pos-acc))
 					return w&mask != 0
 				}
@@ -244,7 +258,8 @@ func (b *Bitmap) Get(pos int64) bool {
 			acc += l * 64
 		}
 
-		i += int(l)
+		b.cursor += int(l)
+		b.acc = acc
 	}
 
 	return false

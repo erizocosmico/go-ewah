@@ -7,10 +7,6 @@
 - Read and write EWAH bitmaps using the [serialization format used by git](https://github.com/git/git/blob/master/Documentation/technical/bitmap-format.txt#L92).
 - Fast read and writes.
 
-## TODO
-
-- Use a cursor to improve the speed of sequential reads.
-
 ## Install
 
 ```
