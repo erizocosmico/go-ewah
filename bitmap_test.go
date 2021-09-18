@@ -105,6 +105,11 @@ func TestBitmapSet(t *testing.T) {
 }
 
 func TestBitmapSetOverflowL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("not running this on short mode")
+		return
+	}
+
 	if os.Getenv("TRAVIS") == "true" {
 		t.Skip("uses too much memory to run on travis")
 		return
@@ -208,6 +213,21 @@ func TestSetBit(t *testing.T) {
 		expected,
 		fmt.Sprintf("%064s", strconv.FormatUint(n, 2)),
 	)
+}
+
+// see: https://github.com/erizocosmico/go-ewah/issues/1
+func TestBug1(t *testing.T) {
+	b := New()
+	arr := []int64{1, 5, 8, 11, 15, 19, 23, 30, 128}
+	for _, e := range arr {
+		b.Set(e)
+	}
+
+	for _, e := range arr {
+		if !b.Get(e) {
+			t.Errorf("expecting %d to be in bitmap", e)
+		}
+	}
 }
 
 func BenchmarkBitmapGet(b *testing.B) {

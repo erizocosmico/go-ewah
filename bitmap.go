@@ -174,7 +174,6 @@ func (b *Bitmap) Set(pos int64) error {
 
 		// all bits in this literal are 1s, so transform it into a rlw
 		if b.w[last] == allones {
-
 			// previous rlw has 1 literal (the one being transformed), so
 			// remove the literal and increase k by 1 only if k does not overflow
 			if lastrlw.b() && lastrlw.l() == 1 && lastrlw.k() < math.MaxUint32 {
@@ -198,14 +197,13 @@ func (b *Bitmap) Set(pos int64) error {
 		if k == 0 && lastrlw.l()+1 <= maxUint31 {
 			lastrlw.setl(lastrlw.l() + 1)
 			b.w[b.lastrlw] = uint64(lastrlw)
-		} else if k > 0 && int64(lastrlw.k())+k <= math.MaxUint32 {
+		} else if k > 0 && int64(lastrlw.k())+k <= math.MaxUint32 && lastrlw.l() == 0 {
 			// increment k only if k does not overflow
 			lastrlw.setk(lastrlw.k() + uint32(k))
 			lastrlw.setl(lastrlw.l() + 1)
 			b.w[b.lastrlw] = uint64(lastrlw)
 		} else {
 			b.w = append(b.w, uint64(newRlw(false, uint32(k-math.MaxUint32-1), 1)))
-			b.w[b.lastrlw] = uint64(lastrlw)
 			b.lastrlw = len(b.w) - 1
 		}
 
@@ -270,7 +268,7 @@ func (b *Bitmap) Bits() uint32 {
 	return uint32(b.n)
 }
 
-// size returns the number of bits allocated allocated, even if
+// size returns the number of bits allocated, even if
 // they are not used yet. Result of size() will always be equal
 // or greater than n.
 func (b *Bitmap) size() int64 {
